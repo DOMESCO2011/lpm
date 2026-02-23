@@ -1,0 +1,13 @@
+{
+    "packages": [
+        {
+            "filename": "test.AppImage",
+            "hash": "b5cdd37c46acad52a9a3638210699d61f5b2a73c111adad035f8d1c60ab4fcd1",
+            "id": "test-app",
+            "launch_command": "./test.AppImage",
+            "name": "Test Application",
+            "size_bytes": 197824,
+            "version": "1.0.0"
+        }
+    ]
+}
