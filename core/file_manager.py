@@ -5,7 +5,7 @@ def rm(package):
         print(f"[INFO] Deleting package: {package}")
         try:
             os.system(f"rm storage/cache/{package}")
-            print("Packet has been removed")
+            print("[INFO]Packet has been removed")
         except Exception as e:
             print(f"[ERR] Error while deleting package: {e}")
     else:

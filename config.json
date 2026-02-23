@@ -1,5 +1,11 @@
 {
   "mirror_servers": [
-    "192.168.0.22:5000"
-  ]
+    {
+      "host": "192.168.0.22",
+      "https_port": 5000,
+      "ssh_port": 22
+    }
+  ],
+  "ssh-username": "domesco",
+  "ssh-hash": "gAAAAABpnK2C34g_hXOM_RxHYIBoj6fL7pFDxuRd77ETGupe8yU-Hn2SJpUU-jr7kRTJNA4PuTGmTnereWYpe3Ce3CKIT2pBZQ=="
 }
