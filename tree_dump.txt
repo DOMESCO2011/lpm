@@ -1,0 +1,518 @@
+Directory tree of: /home/domesco/Documents/lpm
+
+├── .gitattributes
+├── LICENSE
+├── README.md
+├── config.json
+│   | {
+│   |   "mirror_servers": [
+│   |     {
+│   |       "host": "192.168.0.22",
+│   |       "https_port": 5000,
+│   |       "ssh_port": 22
+│   |     }
+│   |   ],
+│   |   "ssh-username": "domesco",
+│   |   "ssh-hash": "gAAAAABpnK2C34g_hXOM_RxHYIBoj6fL7pFDxuRd77ETGupe8yU-Hn2SJpUU-jr7kRTJNA4PuTGmTnereWYpe3Ce3CKIT2pBZQ=="
+│   | }
+├── core
+│   ├── __init__.py
+│   ├── config_manager.py
+│   │   | # Use r""" to handle backslashes correctly
+│   │   | logo_str = r"""
+│   │   | $$\       $$$$$$$\  $$\      $$\
+│   │   | $$ |      $$  __$$\ $$$\    $$$ |
+│   │   | $$ |      $$ |  $$ |$$$$\  $$$$ |
+│   │   | $$ |      $$$$$$$  |$$\$$\$$ $$ |
+│   │   | $$ |      $$  ____/ $$ \$$$  $$ |
+│   │   | $$ |      $$ |      $$ |\$  /$$ |
+│   │   | $$$$$$$$\ $$ |      $$ | \_/ $$ |
+│   │   | \________|\__|      \__|     \__|
+│   │   | """
+│   │   | def int_main():
+│   │   |     print(logo_str)
+│   │   |     print("LPM configuration interpreter -- type help to the help message")
+│   │   |     while True:
+│   │   |         command = input("lpm:interpreter> ")
+│   │   |         if command == "exit": # Added an exit condition so you aren't trapped!
+│   │   |             break
+│   │   |         elif command == "config":
+│   │   |             pass
+│   │   |         else:
+│   │   |             print("Command not found")
+│   │   | def config():
+│   │   |     print("Config")
+│   ├── file_manager.py
+│   │   | import os
+│   │   | def rm(package):
+│   │   |     if input(f"Do you want to remove {package} N/y ") == "y":
+│   │   |         print(f"[INFO] Deleting package: {package}")
+│   │   |         try:
+│   │   |             os.system(f"rm storage/cache/{package}")
+│   │   |             print("[INFO]Packet has been removed")
+│   │   |         except Exception as e:
+│   │   |             print(f"[ERR] Error while deleting package: {e}")
+│   │   |     else:
+│   │   |         pass
+│   ├── launch_manager.py
+│   │   | import os
+│   │   | import subprocess
+│   │   | from pathlib import Path
+│   │   | class LaunchManager:
+│   │   |     def __init__(self):
+│   │   |         # A struktúra alapján a storage/cache mappát használjuk
+│   │   |         self.root_dir = Path(__file__).parent.parent
+│   │   |         self.cache_dir = self.root_dir / "storage" / "cache"
+│   │   |     def launch_package(self, package_name):
+│   │   |         """Megkeresi és futtatja a csomagot a cache-ből."""
+│   │   |         # Megkeressük a fájlt (lehet .AppImage kiterjesztése vagy anélkül)
+│   │   |         # Először pontos egyezést nézünk, aztán .AppImage kiterjesztéssel
+│   │   |         target_path = self.cache_dir / package_name
+│   │   |         if not target_path.exists():
+│   │   |             target_path = self.cache_dir / f"{package_name}.AppImage"
+│   │   |         if not target_path.exists():
+│   │   |             print(f"[ERR] Package '{package_name}' not found in cache. Run 'lpm trans' first.")
+│   │   |             return False
+│   │   |         # Ellenőrizzük, hogy futtatható-e (Linuxon ez kritikus)
+│   │   |         if not os.access(target_path, os.X_OK):
+│   │   |             print(f"[WARN] Package '{package_name}' is not executable. Fixing permissions...")
+│   │   |             try:
+│   │   |                 os.chmod(target_path, 0o755)
+│   │   |             except Exception as e:
+│   │   |                 print(f"[ERR] Failed to set executable permission: {e}")
+│   │   |                 return False
+│   │   |         print(f"[INFO] Launching {target_path.name}...")
+│   │   |         try:
+│   │   |             # Popen-t használunk, hogy a fő folyamat ne fagyjon be, amíg a szoftver fut
+│   │   |             # A stderr és stdout az aktuális terminálra lesz irányítva
+│   │   |             subprocess.run([str(target_path)], check=True)
+│   │   |             return True
+│   │   |         except KeyboardInterrupt:
+│   │   |             print(f"\n[INFO] Package '{package_name}' stopped by user.")
+│   │   |             return True
+│   │   |         except Exception as e:
+│   │   |             print(f"[ERR] An error occurred while running the package: {e}")
+│   │   |             return False
+│   ├── networking.py
+│   │   | import subprocess
+│   │   | def ping_isactive(addr):
+│   │   |     """
+│   │   |     Megpingeli a megadott címet Linux alatt.
+│   │   |     Visszatérési érték: True (él) / False (nem elérhető)
+│   │   |     """
+│   │   |     try:
+│   │   |         result = subprocess.run(
+│   │   |             ["ping", "-c", "1", "-W", "1", addr],
+│   │   |             stdout=subprocess.DEVNULL,
+│   │   |             stderr=subprocess.DEVNULL
+│   │   |         )
+│   │   |         return result.returncode == 0
+│   │   |     except Exception:
+│   │   |         return False
+│   ├── osm
+│   │   └── initialization_manager.py
+│   │       | import json
+│   │       | import os
+│   │       | import sys
+│   │       | import paramiko
+│   │       | current_dir = os.path.dirname(os.path.abspath(__file__))
+│   │       | project_root = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+│   │       | if project_root not in sys.path:
+│   │       |     sys.path.insert(0, project_root)
+│   │       | from crypto.encrypt import encrypt
+│   │       | from crypto.encrypt import decrypt
+│   │       | def save_to_config(username, password_hash):
+│   │       |     current_dir = os.path.dirname(os.path.abspath(__file__))
+│   │       |     config_path = os.path.join(current_dir, "..", "..", "config.json")
+│   │       |     try:
+│   │       |         with open(config_path, "r", encoding="utf-8") as f:
+│   │       |             data = json.load(f)
+│   │       |     except (FileNotFoundError, json.JSONDecodeError):
+│   │       |         print("[ERR] config.json not found")
+│   │       |     data["ssh-username"] = username
+│   │       |     data["ssh-hash"] = password_hash
+│   │       |     with open(config_path, "w", encoding="utf-8") as f:
+│   │       |         json.dump(data, f, indent=2)
+│   │       | def ssh_cliinit():
+│   │       |     usrname = input("Enter your osm ssh server username: ")
+│   │       |     hashpass = encrypt(input("Enter your osm ssh server password: "))
+│   │       |     save_to_config(usrname, hashpass)
+│   │       | def sshserverinit():
+│   │       |     current_dir = os.path.dirname(os.path.abspath(__file__))
+│   │       |     # A projekt gyökerében lévő config.json elérése
+│   │       |     config_path = os.path.normpath(os.path.join(current_dir, "..", "..", "config.json"))
+│   │       |     try:
+│   │       |         # 1. Adatok betöltése a config.json-ból
+│   │       |         with open(config_path, "r", encoding="utf-8") as f:
+│   │       |             data = json.load(f)
+│   │       |         user = data.get("ssh-username")
+│   │       |         encrypted_pass = data.get("ssh-hash")
+│   │       |         # A mirror_servers listából vesszük az első szerver objektumot
+│   │       |         servers = data.get("mirror_servers", [])
+│   │       |         if not servers:
+│   │       |             print("[ERR] No mirror servers found in config.json")
+│   │       |             return
+│   │       |         server = servers[0]
+│   │       |         host = server.get("host")
+│   │       |         ssh_port = server.get("ssh_port", 22)  # Alapértelmezett 22, ha nincs megadva
+│   │       |         https_port = server.get("https_port", 5000) # Későbbi API hívásokhoz jól jöhet
+│   │       |         if not host or not user or not encrypted_pass:
+│   │       |             print("[ERR] Missing host, user, or encrypted password in config.json")
+│   │       |             return
+│   │       |         # Jelszó visszafejtése
+│   │       |         password = decrypt(encrypted_pass)
+│   │       |         # 2. SSH kliens inicializálása
+│   │       |         ssh = paramiko.SSHClient()
+│   │       |         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+│   │       |         # Itt már a dedikált ssh_port-ot használjuk!
+│   │       |         print(f"Connecting to {host} via SSH on port {ssh_port} (User: {user})...")
+│   │       |         ssh.connect(
+│   │       |             hostname=host,
+│   │       |             port=ssh_port,
+│   │       |             username=user,
+│   │       |             password=password,
+│   │       |             timeout=10 # Érdemes egy timeout-ot megadni a lefagyás ellen
+│   │       |         )
+│   │       |         print("[OK] SSH connection established.")
+│   │       |         # 3. SFTP munkamenet nyitása
+│   │       |         sftp = ssh.open_sftp()
+│   │       |         print("[OK] SFTP session opened.")
+│   │       |         return ssh, sftp # Érdemes visszaadni őket, hogy tudj velük dolgozni
+│   │       |     except Exception as e:
+│   │       |         print(f"Hiba történt: {e}")
+│   │       |         return None, None
+│   │       | sshserverinit()
+│   ├── osm_manager.py
+│   ├── sync_manager.py
+│   │   | import os
+│   │   | import json
+│   │   | import requests
+│   │   | from pathlib import Path
+│   │   | class SyncManager:
+│   │   |     def __init__(self):
+│   │   |         # 1. Resolve the absolute path of the current script
+│   │   |         current_path = Path(__file__).resolve()
+│   │   |         # 2. Find the 'lpm' root directory
+│   │   |         self.root_dir = None
+│   │   |         for parent in [current_path] + list(current_path.parents):
+│   │   |             if parent.name == "lpm":
+│   │   |                 self.root_dir = parent
+│   │   |                 break
+│   │   |         if not self.root_dir:
+│   │   |             # Fallback to 2 levels up if 'lpm' name isn't found
+│   │   |             self.root_dir = current_path.parent.parent
+│   │   |         self.config_path = self.root_dir / "config.json"
+│   │   |         self.registry_dir = self.root_dir / "storage" / "registry"
+│   │   |         # Ensure the storage directory exists
+│   │   |         self.registry_dir.mkdir(parents=True, exist_ok=True)
+│   │   |     def load_mirrors(self):
+│   │   |         """Loads the mirror server list from the config.json file."""
+│   │   |         if not self.config_path.exists():
+│   │   |             print(f"[ERR] Config file not found at: {self.config_path}")
+│   │   |             return []
+│   │   |         try:
+│   │   |             with open(self.config_path, "r", encoding="utf-8") as f:
+│   │   |                 config = json.load(f)
+│   │   |                 mirrors = config.get("mirror_servers", [])
+│   │   |                 if not isinstance(mirrors, list):
+│   │   |                     print("[ERR] 'mirror_servers' in config.json must be a list.")
+│   │   |                     return []
+│   │   |                 return mirrors
+│   │   |         except (json.JSONDecodeError, IOError) as e:
+│   │   |             print(f"[ERR] Failed to read config.json: {e}")
+│   │   |             return []
+│   │   |     def perform_sync(self):
+│   │   |         """Connects to mirrors and saves registry metadata."""
+│   │   |         mirrors = self.load_mirrors()
+│   │   |         if not mirrors:
+│   │   |             print("[WARN] No mirror servers found in configuration.")
+│   │   |             return
+│   │   |         for mirror in mirrors:
+│   │   |             # Handle both string and dictionary formats from config.json
+│   │   |             if isinstance(mirror, dict):
+│   │   |                 host = mirror.get("host")
+│   │   |                 # Use https_port if available, otherwise default to 5000 as requested
+│   │   |                 port = mirror.get("https_port") or mirror.get("port") or 5000
+│   │   |                 mirror_str = f"{host}:{port}" if host else None
+│   │   |             else:
+│   │   |                 mirror_str = str(mirror).strip()
+│   │   |             if not mirror_str:
+│   │   |                 print(f"[ERR] Skipping invalid mirror entry: {mirror}")
+│   │   |                 continue
+│   │   |             # Construct the final URL
+│   │   |             url_base = mirror_str if mirror_str.startswith("http") else f"http://{mirror_str}"
+│   │   |             sync_url = f"{url_base.rstrip('/')}/sync"
+│   │   |             print(f"[INFO] Connecting to: {sync_url}")
+│   │   |             try:
+│   │   |                 # Request the sync data
+│   │   |                 response = requests.get(sync_url, timeout=10)
+│   │   |                 response.raise_for_status()
+│   │   |                 data = response.json()
+│   │   |                 # Sanitize filename for Linux filesystem
+│   │   |                 safe_name = mirror_str.replace(":", "_").replace(".", "_")
+│   │   |                 save_path = self.registry_dir / f"{safe_name}.json"
+│   │   |                 with open(save_path, "w", encoding="utf-8") as f:
+│   │   |                     json.dump(data, f, indent=4, ensure_ascii=False)
+│   │   |                 print(f"[OK] Sync complete! Data saved to: {save_path.name}")
+│   │   |             except requests.exceptions.RequestException as e:
+│   │   |                 print(f"[ERR] Connection failed for {mirror_str}: {e}")
+│   │   | if __name__ == "__main__":
+│   │   |     # Test execution
+│   │   |     manager = SyncManager()
+│   │   |     manager.perform_sync()
+│   └── transaction_manager.py
+│       | import os
+│       | import json
+│       | import hashlib
+│       | import requests
+│       | from pathlib import Path
+│       | class TransactionManager:
+│       |     def __init__(self):
+│       |         # Elérési utak beállítása
+│       |         self.root_dir = Path(__file__).parent.parent
+│       |         self.registry_dir = self.root_dir / "storage" / "registry"
+│       |         self.cache_dir = self.root_dir / "storage" / "cache"
+│       |         self.config_path = self.root_dir / "config.json"
+│       |         # Mappa létrehozása, ha még nincs
+│       |         self.cache_dir.mkdir(parents=True, exist_ok=True)
+│       |     def _get_local_hash(self, file_path):
+│       |         if not file_path.exists():
+│       |             return None
+│       |         sha256_hash = hashlib.sha256()
+│       |         try:
+│       |             with open(file_path, "rb") as f:
+│       |                 for byte_block in iter(lambda: f.read(4096), b""):
+│       |                     sha256_hash.update(byte_block)
+│       |             return sha256_hash.hexdigest()
+│       |         except Exception:
+│       |             return None
+│       |     def _load_mirrors(self):
+│       |         if not self.config_path.exists():
+│       |             print("[ERR] config.json not found")
+│       |             return []
+│       |         try:
+│       |             with open(self.config_path, "r", encoding="utf-8") as f:
+│       |                 data = json.load(f)
+│       |                 return data.get("mirror_servers", [])
+│       |         except Exception as e:
+│       |             print(f"[ERR] Failed to load config: {e}")
+│       |             return []
+│       |     def process_downloads(self):
+│       |         mirrors = self._load_mirrors()
+│       |         if not mirrors:
+│       |             print("[ERR] No mirrors configured")
+│       |             return
+│       |         # Végigmegyünk minden regisztrált JSON fájlon a registry-ben
+│       |         for reg_file in self.registry_dir.glob("*.json"):
+│       |             try:
+│       |                 with open(reg_file, "r", encoding="utf-8") as f:
+│       |                     data = json.load(f)
+│       |                     packages = data.get("packages", [])
+│       |             except Exception:
+│       |                 continue
+│       |             for pkg in packages:
+│       |                 filename = pkg.get("filename")
+│       |                 expected_hash = pkg.get("hash")
+│       |                 if not filename: continue
+│       |                 target_path = self.cache_dir / filename
+│       |                 # 1. Ellenőrizzük, megvan-e már és jó-e a hash
+│       |                 if target_path.exists():
+│       |                     if self._get_local_hash(target_path) == expected_hash:
+│       |                         print(f"[OK] {filename} is up to date")
+│       |                         continue
+│       |                 # 2. Letöltés megkísérlése a mirrorokról
+│       |                 success = False
+│       |                 for mirror in mirrors:
+│       |                     # Kinyerjük az adatokat a JSON objektumból
+│       |                     host = mirror.get("host")
+│       |                     port = mirror.get("https_port", 5000) # Alapértelmezett, ha nincs megadva
+│       |                     if not host:
+│       |                         continue
+│       |                     # URL összeállítása a host és a port alapján
+│       |                     base_url = f"http://{host}:{port}"
+│       |                     download_url = f"{base_url}/download/{filename}"
+│       |                     print(f"[INFO] Downloading {filename} from {host}:{port}...")
+│       |                     try:
+│       |                         r = requests.get(download_url, stream=True, timeout=10)
+│       |                         r.raise_for_status()
+│       |                         with open(target_path, "wb") as f_out:
+│       |                             for chunk in r.iter_content(chunk_size=8192):
+│       |                                 if chunk:
+│       |                                     f_out.write(chunk)
+│       |                         # Futtathatóvá tétel
+│       |                         os.chmod(target_path, 0o755)
+│       |                         # Ellenőrzés letöltés után
+│       |                         if self._get_local_hash(target_path) == expected_hash:
+│       |                             print(f"[OK] {filename} downloaded and verified")
+│       |                             success = True
+│       |                             break
+│       |                         else:
+│       |                             print(f"[ERR] Hash mismatch for {filename} from {host}")
+│       |                             if target_path.exists():
+│       |                                 target_path.unlink() # Töröljük a hibás fájlt
+│       |                     except Exception as e:
+│       |                         print(f"[WARN] Failed to download from {host}: {e}")
+│       |                 if not success:
+│       |                     print(f"[ERR] Could not acquire {filename} from any mirror")
+├── crypto
+│   └── encrypt.py
+│       | import os
+│       | from cryptography.fernet import Fernet
+│       | from pathlib import Path
+│       | KEY_FILE = Path.home() / "lpm" / "secret.key"
+│       | def get_cipher():
+│       |     """Returns a Fernet cipher instance, creating the key if it doesn't exist."""
+│       |     if not KEY_FILE.exists():
+│       |         KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+│       |         key = Fernet.generate_key()
+│       |         KEY_FILE.write_bytes(key)
+│       |         os.chmod(KEY_FILE, 0o600)  # Restricted permissions
+│       |     else:
+│       |         key = KEY_FILE.read_bytes()
+│       |     return Fernet(key)
+│       | def encrypt(plain_text: str) -> str:
+│       |     """Encrypts a string and returns a string."""
+│       |     cipher = get_cipher()
+│       |     return cipher.encrypt(plain_text.encode()).decode()
+│       | def decrypt(encrypted_text: str) -> str:
+│       |     """Decrypts a string and returns the original text."""
+│       |     cipher = get_cipher()
+│       |     return cipher.decrypt(encrypted_text.encode()).decode()
+├── dump.py
+│   | import os
+│   | OUTPUT_FILE = "tree_dump.txt"
+│   | # Az ignorálandó mappák listája
+│   | IGNORE_DIRS = {"lpm-venv", ".git", "__pycache__"}
+│   | TEXT_EXTENSIONS = {
+│   |     ".py", ".txt", ".c", ".h", ".ld", ".asm", ".json"
+│   | }
+│   | def write(line, file):
+│   |     print(line)
+│   |     file.write(line + "\n")
+│   | def is_text_file(filename):
+│   |     _, ext = os.path.splitext(filename.lower())
+│   |     return ext in TEXT_EXTENSIONS
+│   | def print_tree(path, file, prefix=""):
+│   |     items = sorted(os.listdir(path))
+│   |     # Kiszűrjük azokat az elemeket, amik az IGNORE_DIRS listában vannak
+│   |     filtered_items = [item for item in items if item not in IGNORE_DIRS]
+│   |     for i, item in enumerate(filtered_items):
+│   |         item_path = os.path.join(path, item)
+│   |         is_last = i == len(filtered_items) - 1
+│   |         connector = "└── " if is_last else "├── "
+│   |         write(prefix + connector + item, file)
+│   |         if os.path.isdir(item_path):
+│   |             new_prefix = prefix + ("    " if is_last else "│   ")
+│   |             print_tree(item_path, file, new_prefix)
+│   |         else:
+│   |             if not is_text_file(item):
+│   |                 continue
+│   |             try:
+│   |                 with open(item_path, "r", encoding="utf-8", errors="ignore") as f:
+│   |                     new_prefix = prefix + ("    " if is_last else "│   ")
+│   |                     for line in f:
+│   |                         line = line.rstrip()
+│   |                         if not line:
+│   |                             continue
+│   |                         if len(line) > 120:
+│   |                             line = line[:117] + "..."
+│   |                         write(new_prefix + "| " + line, file)
+│   |             except Exception:
+│   |                 continue
+│   | if __name__ == "__main__":
+│   |     root_folder = os.path.dirname(os.path.abspath(__file__))
+│   |     with open(OUTPUT_FILE, "w", encoding="utf-8") as out:
+│   |         write(f"Directory tree of: {root_folder}\n", out)
+│   |         print_tree(root_folder, out)
+│   |     print(f"\n✔ Kimenet elmentve: {OUTPUT_FILE}")
+├── lpm
+├── main.py
+│   | import argparse
+│   | import sys
+│   | from core.sync_manager import SyncManager
+│   | from core.transaction_manager import TransactionManager
+│   | from core.launch_manager import LaunchManager
+│   | from core.file_manager import rm
+│   | from core.config_manager import int_main, logo_str
+│   | def main():
+│   |     parser = argparse.ArgumentParser(
+│   |         description="LPM - Launchable Packet Manager",
+│   |         usage="lpm <command> [<args>]"
+│   |     )
+│   |     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+│   |     # --- Core commands ---
+│   |     subparsers.add_parser("sync", help="Sync package list from the central server")
+│   |     subparsers.add_parser("trans", help="Transaction: Sync/Download newly listed packages")
+│   |     subparsers.add_parser("config", help="Configuration interpreter")
+│   |     rem_parser = subparsers.add_parser("rem", help="Remove a package")
+│   |     rem_parser.add_argument("package", help="Name of the package to remove")
+│   |     launch_parser = subparsers.add_parser("launch", help="Run a package in an isolated environment")
+│   |     launch_parser.add_argument("package", help="Name of the package to launch")
+│   |     # --- OSM (Own Mirror System) commands ---
+│   |     osm_parser = subparsers.add_parser("osm", help="Manage your own mirror servers")
+│   |     osm_subparsers = osm_parser.add_subparsers(dest="osm_command")
+│   |     init_parser = osm_subparsers.add_parser("init", help="Initialize a custom server locally")
+│   |     init_parser.add_argument("name", help="Identifier name for the server")
+│   |     conf_parser = osm_subparsers.add_parser("conf", help="Configure server connection details")
+│   |     conf_parser.add_argument("name", help="Name of the server to configure")
+│   |     conn_parser = osm_subparsers.add_parser("connect", help="Connect to the server via SSH")
+│   |     conn_parser.add_argument("name", help="Name of the server")
+│   |     osm_sync_parser = osm_subparsers.add_parser("sync", help="Sync a package from a custom server")
+│   |     osm_sync_parser.add_argument("package", help="Package name")
+│   |     osm_sync_parser.add_argument("name", help="Server name")
+│   |     args = parser.parse_args()
+│   |     # --- Logic Routing ---
+│   |     if args.command == "sync":
+│   |         print("[INFO] Starting package index update...")
+│   |         syncer = SyncManager()
+│   |         syncer.perform_sync()
+│   |     elif args.command == "trans":
+│   |         print("[INFO] Processing transactions...")
+│   |         tm = TransactionManager()
+│   |         tm.process_downloads()
+│   |     elif args.command == "rem":
+│   |         rm(args.package)
+│   |     elif args.command == "launch":
+│   |         # Itt hívjuk meg a launch_manager-t
+│   |         launcher = LaunchManager()
+│   |         launcher.launch_package(args.package)
+│   |     elif args.command == "osm":
+│   |         if args.osm_command == "init":
+│   |             print(f"[INFO] OSM: Initializing {args.name}...")
+│   |         elif args.osm_command == "conf":
+│   |             print(f"[INFO] OSM: Configuring {args.name}...")
+│   |         elif args.osm_command == "connect":
+│   |             print(f"[INFO] OSM: Connecting to {args.name}...")
+│   |         elif args.osm_command == "sync":
+│   |             print(f"[INFO] OSM: Syncing {args.package} from {args.name}...")
+│   |         else:
+│   |             osm_parser.print_help()
+│   |     elif args.command == "config":
+│   |         int_main()
+│   |     else:
+│   |         parser.print_help()
+│   | if __name__ == "__main__":
+│   |     main()
+├── requrements.txt
+│   | cryptography
+│   | requests
+├── storage
+│   ├── cache
+│   │   └── test.AppImage
+│   ├── osm
+│   └── registry
+│       └── 192_168_0_22_5000.json
+│           | {
+│           |     "packages": [
+│           |         {
+│           |             "filename": "test.AppImage",
+│           |             "hash": "b5cdd37c46acad52a9a3638210699d61f5b2a73c111adad035f8d1c60ab4fcd1",
+│           |             "id": "test-app",
+│           |             "launch_command": "./test.AppImage",
+│           |             "name": "Test Application",
+│           |             "size_bytes": 197824,
+│           |             "version": "1.0.0"
+│           |         }
+│           |     ]
+│           | }
+└── tree_dump.txt

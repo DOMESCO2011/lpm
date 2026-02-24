@@ -2,6 +2,9 @@ import os
 
 OUTPUT_FILE = "tree_dump.txt"
 
+# Az ignorálandó mappák listája
+IGNORE_DIRS = {"lpm-venv", ".git", "__pycache__"}
+
 TEXT_EXTENSIONS = {
     ".py", ".txt", ".c", ".h", ".ld", ".asm", ".json"
 }
@@ -16,9 +19,13 @@ def is_text_file(filename):
 
 def print_tree(path, file, prefix=""):
     items = sorted(os.listdir(path))
-    for i, item in enumerate(items):
+    
+    # Kiszűrjük azokat az elemeket, amik az IGNORE_DIRS listában vannak
+    filtered_items = [item for item in items if item not in IGNORE_DIRS]
+    
+    for i, item in enumerate(filtered_items):
         item_path = os.path.join(path, item)
-        is_last = i == len(items) - 1
+        is_last = i == len(filtered_items) - 1
         connector = "└── " if is_last else "├── "
         write(prefix + connector + item, file)
 
@@ -26,7 +33,6 @@ def print_tree(path, file, prefix=""):
             new_prefix = prefix + ("    " if is_last else "│   ")
             print_tree(item_path, file, new_prefix)
         else:
-            # 🔒 csak engedélyezett szövegfájlok tartalma
             if not is_text_file(item):
                 continue
 
